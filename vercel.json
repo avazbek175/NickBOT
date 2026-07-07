@@ -1,16 +1,7 @@
 {
-  "functions": {
-    "api/webhook.py": {
-      "maxDuration": 30,
-      "memory": 512
-    },
-    "api/setup.py": {
-      "maxDuration": 10,
-      "memory": 256
-    }
-  },
   "rewrites": [
-    { "source": "/webhook", "destination": "/api/webhook" },
-    { "source": "/setup", "destination": "/api/setup" }
+    { "source": "/webhook", "destination": "/api/index" },
+    { "source": "/setup", "destination": "/api/setup" },
+    { "source": "/(.*)", "destination": "/api/index" }
   ]
 }
