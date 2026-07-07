@@ -1,7 +1,6 @@
 import logging
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
-from aiogram.filters import Command
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.domain.enums import Language
 from src.utils.localizer import get_text
@@ -11,7 +10,6 @@ from src.presentation.keyboards.inline import (
     leaderboard_kb, random_count_kb,
 )
 from src.services.user_service import UserService
-from src.services.nickname_service import NicknameService
 from src.infrastructure.repository import UserRepository, FavoriteRepository, HistoryRepository
 
 router = Router()
@@ -29,19 +27,27 @@ async def go_home_text(message: Message, session: AsyncSession):
     await show_home(message, session)
 
 
-@router.callback_query(F.data == "back_menu")
+@router.callback_query(F.data == "bm")
 async def go_home_callback(call: CallbackQuery, session: AsyncSession):
-    await call.message.delete()
-    await show_home(call.message, session)
     await call.answer()
+    try:
+        await call.message.delete()
+    except Exception:
+        pass
+    await show_home(call.message, session)
 
 
 async def show_home(message: Message, session: AsyncSession):
     user_id = message.from_user.id
-    lang = await get_user_lang(session, user_id)
-    repo = UserRepository(session)
-    user = await repo.get(user_id)
-    stats = get_text("stats", lang, total_today=0, total_all=user.total_generated if user else 0)
+    user_service = UserService(session)
+    user = await user_service.get_or_create(
+        user_id,
+        message.from_user.username,
+        message.from_user.first_name,
+        message.from_user.last_name,
+    )
+    lang = user.language
+    stats = get_text("stats", lang, total_today=0, total_all=user.total_generated)
     await message.answer(
         get_text("main_menu", lang, name=user.first_name or user.username or str(user_id), stats=stats),
         reply_markup=main_menu_kb(lang),

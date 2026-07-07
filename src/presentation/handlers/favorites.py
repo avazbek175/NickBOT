@@ -3,23 +3,33 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.utils.localizer import get_text
+from src.domain.enums import Language
 from src.infrastructure.repository import FavoriteRepository, UserRepository
+from src.services.user_service import UserService
 from src.presentation.keyboards.inline import favorites_kb, back_kb
 
 router = Router()
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data.startswith("fav_add:"))
+@router.callback_query(F.data.startswith("fa:"))
 async def add_favorite(call: CallbackQuery, session: AsyncSession):
     parts = call.data.split(":", 2)
+    if len(parts) < 3:
+        await call.answer()
+        return
     nickname = parts[1]
     category = parts[2]
     user_id = call.from_user.id
 
-    repo = UserRepository(session)
-    user = await repo.get(user_id)
-    lang = user.language if user else __import__("src.domain.enums", fromlist=["Language"]).Language.UZBEK
+    user_service = UserService(session)
+    user = await user_service.get_or_create(
+        user_id,
+        call.from_user.username,
+        call.from_user.first_name,
+        call.from_user.last_name,
+    )
+    lang = user.language
 
     fav_repo = FavoriteRepository(session)
     exists = await fav_repo.exists(user_id, nickname)
@@ -32,41 +42,68 @@ async def add_favorite(call: CallbackQuery, session: AsyncSession):
     await session.commit()
 
     await call.answer(get_text("saved", lang, nickname=nickname), show_alert=True)
-    from src.presentation.keyboards.inline import nickname_action_kb
-    await call.message.edit_reply_markup(
-        reply_markup=nickname_action_kb(nickname, category, True, lang)
-    )
 
 
-@router.callback_query(F.data.startswith("fav_del:"))
-async def remove_favorite(call: CallbackQuery, session: AsyncSession):
-    nickname = call.data.split(":", 1)[1]
+@router.callback_query(F.data.startswith("sa:"))
+async def save_all_favorites(call: CallbackQuery, session: AsyncSession):
+    parts = call.data.split(":")
+    if len(parts) < 3:
+        await call.answer()
+        return
+    token = parts[1]
+    category = parts[2]
     user_id = call.from_user.id
 
-    repo = UserRepository(session)
-    user = await repo.get(user_id)
-    lang = user.language if user else __import__("src.domain.enums", fromlist=["Language"]).Language.UZBEK
+    from src.presentation.handlers.nickname import _get_cached
+    cached = _get_cached(token)
+
+    if not cached:
+        await call.answer("Session expired. Generate again.", show_alert=True)
+        return
+
+    user_service = UserService(session)
+    user = await user_service.get_or_create(
+        user_id,
+        call.from_user.username,
+        call.from_user.first_name,
+        call.from_user.last_name,
+    )
+    lang = user.language
 
     fav_repo = FavoriteRepository(session)
-    favs = await fav_repo.get_user_favorites(user_id)
-    for fav in favs:
-        if fav.nickname == nickname:
-            await fav_repo.delete(fav.id)
-            user.favorites_count = max(0, user.favorites_count - 1)
-            await session.commit()
-            break
+    saved_count = 0
+    for name in cached["names"]:
+        exists = await fav_repo.exists(user_id, name)
+        if not exists:
+            await fav_repo.add(user_id, name, category)
+            user.favorites_count += 1
+            saved_count += 1
 
-    await call.answer(get_text("deleted", lang), show_alert=True)
+    await session.commit()
+    await call.answer(f"⭐ {saved_count} nicknames saved!", show_alert=True)
 
 
-@router.callback_query(F.data.startswith("fav_del_id:"))
+@router.callback_query(F.data.startswith("fd:"))
 async def remove_favorite_by_id(call: CallbackQuery, session: AsyncSession):
-    fid = int(call.data.split(":")[1])
+    parts = call.data.split(":")
+    if len(parts) < 2:
+        await call.answer()
+        return
+    try:
+        fid = int(parts[1])
+    except (ValueError, IndexError):
+        await call.answer()
+        return
     user_id = call.from_user.id
 
-    repo = UserRepository(session)
-    user = await repo.get(user_id)
-    lang = user.language if user else __import__("src.domain.enums", fromlist=["Language"]).Language.UZBEK
+    user_service = UserService(session)
+    user = await user_service.get_or_create(
+        user_id,
+        call.from_user.username,
+        call.from_user.first_name,
+        call.from_user.last_name,
+    )
+    lang = user.language
 
     fav_repo = FavoriteRepository(session)
     await fav_repo.delete(fid)
@@ -88,14 +125,27 @@ async def remove_favorite_by_id(call: CallbackQuery, session: AsyncSession):
     )
 
 
-@router.callback_query(F.data.startswith("fav_page:"))
+@router.callback_query(F.data.startswith("fp:"))
 async def favorites_pagination(call: CallbackQuery, session: AsyncSession):
-    page = int(call.data.split(":")[1])
+    parts = call.data.split(":")
+    if len(parts) < 2:
+        await call.answer()
+        return
+    try:
+        page = int(parts[1])
+    except (ValueError, IndexError):
+        await call.answer()
+        return
     user_id = call.from_user.id
 
-    repo = UserRepository(session)
-    user = await repo.get(user_id)
-    lang = user.language if user else __import__("src.domain.enums", fromlist=["Language"]).Language.UZBEK
+    user_service = UserService(session)
+    user = await user_service.get_or_create(
+        user_id,
+        call.from_user.username,
+        call.from_user.first_name,
+        call.from_user.last_name,
+    )
+    lang = user.language
 
     fav_repo = FavoriteRepository(session)
     favs = await fav_repo.get_user_favorites(user_id, page * 10, 10)

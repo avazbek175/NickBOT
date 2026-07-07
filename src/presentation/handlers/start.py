@@ -3,13 +3,15 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from src.domain.models import User as UserModel
 from src.domain.enums import Language, UserStatus
 from src.utils.localizer import get_text
 from src.presentation.keyboards.reply import main_menu_kb
 from src.presentation.keyboards.inline import force_join_kb, back_kb
 from src.services.user_service import UserService
 from src.services.admin_service import AdminService
-from src.infrastructure.repository import ForceChannelRepository
+from src.infrastructure.repository import ForceChannelRepository, UserRepository
 from src.config import config
 
 router = Router()
@@ -27,15 +29,13 @@ async def cmd_start(message: Message, session: AsyncSession):
     if message.text and len(message.text.split()) > 1:
         ref_code = message.text.split()[1]
         if ref_code.startswith("ref_"):
-            from src.infrastructure.repository import UserRepository
             repo = UserRepository(session)
             result = await session.execute(
-                __import__("sqlalchemy").select(__import__("src.domain.models", fromlist=["User"]).User)
-                .where(__import__("src.domain.models", fromlist=["User"]).User.referral_code == ref_code[4:])
+                select(UserModel).where(UserModel.referral_code == ref_code[4:])
             )
-            referrer = result.scalar()
-            if referrer:
-                referred_by = referrer.id
+            referrer_user = result.scalar()
+            if referrer_user:
+                referred_by = referrer_user.id
 
     user_service = UserService(session)
     user = await user_service.get_or_create(user_id, username, first_name, last_name, referred_by)
@@ -63,10 +63,9 @@ async def cmd_start(message: Message, session: AsyncSession):
     )
 
 
-@router.callback_query(F.data == "check_subs")
+@router.callback_query(F.data == "cs")
 async def check_subscriptions(call: CallbackQuery, session: AsyncSession):
     user_id = call.from_user.id
-    from src.infrastructure.repository import UserRepository
     repo = UserRepository(session)
     user = await repo.get(user_id)
     if not user:
@@ -75,7 +74,6 @@ async def check_subscriptions(call: CallbackQuery, session: AsyncSession):
 
     lang = user.language
 
-    from src.infrastructure.repository import ForceChannelRepository
     force_repo = ForceChannelRepository(session)
     channels = await force_repo.get_active_channels()
 
@@ -92,7 +90,10 @@ async def check_subscriptions(call: CallbackQuery, session: AsyncSession):
     if all_subscribed:
         await repo.update(user_id, is_force_joined=True)
         stats = get_text("stats", lang, total_today=0, total_all=user.total_generated)
-        await call.message.delete()
+        try:
+            await call.message.delete()
+        except Exception:
+            pass
         await call.message.answer(get_text("sub_success", lang), parse_mode="HTML")
         await call.message.answer(
             get_text("main_menu", lang, name=user.first_name or user.username or str(user_id), stats=stats),
@@ -105,7 +106,6 @@ async def check_subscriptions(call: CallbackQuery, session: AsyncSession):
 
 @router.message(Command("help"))
 async def cmd_help(message: Message, session: AsyncSession):
-    from src.infrastructure.repository import UserRepository
     repo = UserRepository(session)
     user = await repo.get(message.from_user.id)
     lang = user.language if user else Language.UZBEK

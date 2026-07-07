@@ -84,6 +84,9 @@ class BotApplication:
         except Exception as e:
             logger.warning("Scheduler unavailable: %s", e)
 
+        logger.info("Removing webhook before polling...")
+        await self.bot.delete_webhook(drop_pending_updates=True)
+
         logger.info("Starting bot polling...")
         await self.dp.start_polling(
             self.bot,
@@ -101,5 +104,10 @@ class BotApplication:
             pass
         try:
             await self.bot.session.close()
+        except Exception:
+            pass
+        try:
+            from src.infrastructure.database import engine
+            await engine.dispose()
         except Exception:
             pass

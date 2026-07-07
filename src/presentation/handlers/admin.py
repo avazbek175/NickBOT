@@ -1,11 +1,15 @@
 import logging
+from datetime import datetime, timedelta
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
+from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.domain.enums import Language
+from src.domain.enums import Language, UserStatus
+from src.domain.models import User as UserModel
 from src.utils.localizer import get_text
 from src.services.admin_service import AdminService
+from src.services.user_service import UserService
 from src.infrastructure.repository import UserRepository, ForceChannelRepository, BroadcastRepository
 from src.presentation.keyboards.reply import admin_main_kb, main_menu_kb
 from src.presentation.keyboards.inline import admin_dashboard_kb, back_kb
@@ -50,51 +54,50 @@ async def admin_dashboard_handler(message: Message, session: AsyncSession):
     await message.answer(text, parse_mode="HTML", reply_markup=admin_dashboard_kb(lang))
 
 
-@router.callback_query(F.data.startswith("admin:"))
+@router.callback_query(F.data.startswith("a"))
 async def admin_callback_handler(call: CallbackQuery, session: AsyncSession):
     user_id = call.from_user.id
     if user_id not in config.admin_id_list:
         await call.answer("Access denied")
         return
 
-    action = call.data.split(":", 1)[1]
+    action = call.data
     repo = UserRepository(session)
     user = await repo.get(user_id)
     lang = user.language if user else Language.UZBEK
 
-    if action == "stats":
+    if action == "ast":
         admin_service = AdminService(session)
         dashboard = await admin_service.get_dashboard()
         text = get_text("admin_dashboard", lang, **dashboard)
         await call.message.edit_text(text, parse_mode="HTML", reply_markup=admin_dashboard_kb(lang))
 
-    elif action == "users":
-        from datetime import datetime, timedelta
+    elif action == "au":
         now = datetime.utcnow()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         total = await repo.count()
         today = await repo.count(
-            __import__("sqlalchemy").and_(
-                __import__("src.domain.models", fromlist=["User"]).User.created_at >= today_start
+            and_(
+                UserModel.created_at >= today_start
             )
         )
         text = (
             f"👥 <b>Users</b>\n\n"
             f"Total: {total}\n"
             f"Today: {today}\n"
-            f"Banned: {await repo.count(__import__('src.domain.models', fromlist=['User']).User.status == __import__('src.domain.enums', fromlist=['UserStatus']).UserStatus.BANNED)}"
+            f"Banned: {await repo.count(UserModel.status == UserStatus.BANNED)}"
         )
         await call.message.edit_text(text, parse_mode="HTML", reply_markup=back_kb(lang))
 
-    elif action == "broadcast":
+    elif action == "abr":
         text = "📢 <b>Broadcast</b>\n\nSend a message to forward to all users.\n\nSupported: Text, Photo, Video, Animation, Document, Voice, Audio, Sticker"
         await call.message.edit_text(text, parse_mode="HTML", reply_markup=back_kb(lang))
 
-    elif action == "add_channel":
+    elif action == "aac":
         text = "➕ <b>Add Force Channel</b>\n\nSend: <code>channel_id | title | link</code>"
         await call.message.edit_text(text, parse_mode="HTML", reply_markup=back_kb(lang))
 
-    elif action == "remove_channel":
+    elif action == "arc":
         force_repo = ForceChannelRepository(session)
         channels = await force_repo.get_all()
         if not channels:
@@ -104,30 +107,26 @@ async def admin_callback_handler(call: CallbackQuery, session: AsyncSession):
             text = "Channels:\n\n" + "\n".join(lines) + "\n\nSend ID to remove."
         await call.message.edit_text(text, parse_mode="HTML", reply_markup=back_kb(lang))
 
-    elif action == "settings":
+    elif action == "aset":
         admin_service = AdminService(session)
         settings = await admin_service.get_settings()
         text = get_text("bot_settings", lang, settings="\n".join(f"{k}: {v}" for k, v in settings.items()) if settings else "No custom settings")
         await call.message.edit_text(text, parse_mode="HTML", reply_markup=back_kb(lang))
 
-    elif action == "ban":
+    elif action == "aban":
         text = "🚫 Send user ID to ban:"
         await call.message.edit_text(text, parse_mode="HTML", reply_markup=back_kb(lang))
 
-    elif action == "unban":
+    elif action == "aunb":
         text = "✅ Send user ID to unban:"
         await call.message.edit_text(text, parse_mode="HTML", reply_markup=back_kb(lang))
 
-    elif action == "find":
+    elif action == "afind":
         text = "🔍 Send username or ID to find:"
         await call.message.edit_text(text, parse_mode="HTML", reply_markup=back_kb(lang))
 
-    elif action == "export":
+    elif action == "aexp":
         text = "📂 Export feature coming soon."
-        await call.message.edit_text(text, parse_mode="HTML", reply_markup=back_kb(lang))
-
-    elif action == "bonus":
-        text = "🎁 Daily bonus settings: Use /settings command."
         await call.message.edit_text(text, parse_mode="HTML", reply_markup=back_kb(lang))
 
     await call.answer()

@@ -3,19 +3,26 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.utils.localizer import get_text
+from src.domain.enums import Language
 from src.infrastructure.repository import UserRepository, HistoryRepository
+from src.services.user_service import UserService
 from src.presentation.keyboards.inline import back_kb
 
 router = Router()
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == "hist_clear")
+@router.callback_query(F.data == "hc")
 async def clear_history(call: CallbackQuery, session: AsyncSession):
     user_id = call.from_user.id
-    repo = UserRepository(session)
-    user = await repo.get(user_id)
-    lang = user.language if user else __import__("src.domain.enums", fromlist=["Language"]).Language.UZBEK
+    user_service = UserService(session)
+    user = await user_service.get_or_create(
+        user_id,
+        call.from_user.username,
+        call.from_user.first_name,
+        call.from_user.last_name,
+    )
+    lang = user.language
 
     hist_repo = HistoryRepository(session)
     await hist_repo.clear_user_history(user_id)

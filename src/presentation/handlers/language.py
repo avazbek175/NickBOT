@@ -17,9 +17,13 @@ LANG_NAMES = {
 }
 
 
-@router.callback_query(F.data.startswith("lang:"))
+@router.callback_query(F.data.startswith("l:"))
 async def change_language(call: CallbackQuery, session: AsyncSession):
-    lang_code = call.data.split(":")[1]
+    parts = call.data.split(":")
+    if len(parts) < 2:
+        await call.answer()
+        return
+    lang_code = parts[1]
     new_lang = Language(lang_code)
 
     repo = UserRepository(session)

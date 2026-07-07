@@ -1,9 +1,11 @@
 from typing import Callable, Awaitable, Any, Dict
 from aiogram import BaseMiddleware
 from aiogram.types import Message, CallbackQuery
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import config
 from src.domain.enums import Language
 from src.utils.localizer import get_text
+from src.infrastructure.repository import UserRepository
 
 
 class MaintenanceMiddleware(BaseMiddleware):
@@ -24,15 +26,20 @@ class MaintenanceMiddleware(BaseMiddleware):
                 return await handler(event, data)
 
             lang = Language.UZBEK
-            if isinstance(event, Message) and event.from_user:
-                lang = Language.UZBEK
-            elif isinstance(event, CallbackQuery) and event.from_user:
-                lang = Language.UZBEK
+            session: AsyncSession | None = data.get("session")
+            if session and user_id:
+                try:
+                    repo = UserRepository(session)
+                    user = await repo.get(user_id)
+                    if user:
+                        lang = user.language
+                except Exception:
+                    pass
 
             text = get_text("maintenance", lang)
             if isinstance(event, Message):
                 await event.answer(text)
-            elif isinstance(event, CallbackQuery):
+            elif isinstance(event, CallbackQuery) and event.message:
                 await event.message.answer(text)
                 await event.answer()
             return
