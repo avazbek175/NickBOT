@@ -1,6 +1,10 @@
 import asyncio
 import logging
+import os
 import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 from src.config import config
 from src.bot import BotApplication
 
@@ -12,7 +16,6 @@ def setup_logging():
         datefmt="%Y-%m-%d %H:%M:%S",
         handlers=[
             logging.StreamHandler(sys.stdout),
-            logging.FileHandler("logs/bot.log", encoding="utf-8"),
         ],
     )
 
