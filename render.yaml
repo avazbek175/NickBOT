@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: nickforge-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/run.py
+    healthCheckPath: /
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSL_MODE
+        value: "require"
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        value: "6379"
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: REDIS_DB
+        value: "0"
+      - key: BOT_NAME
+        value: "NickForge AI"
+      - key: BOT_DESCRIPTION
+        value: "Professional Nickname Generator"
+      - key: BOT_LANG
+        value: "uz"
+      - key: FORCE_JOIN_ENABLED
+        value: "true"
+      - key: REFERRAL_ENABLED
+        value: "true"
+      - key: DAILY_BONUS_ENABLED
+        value: "true"
+      - key: DAILY_BONUS_COINS
+        value: "50"
+      - key: REFERRAL_COINS
+        value: "100"
+      - key: LOG_LEVEL
+        value: "INFO"
+      - key: MAINTENANCE_MODE
+        value: "false"
