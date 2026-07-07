@@ -22,6 +22,7 @@ _dp: Dispatcher | None = None
 
 def create_dispatcher() -> Dispatcher:
     dp = Dispatcher()
+
     dp.include_router(start.router)
     dp.include_router(menu.router)
     dp.include_router(nickname.router)
@@ -33,9 +34,15 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(leaderboard.router)
     dp.include_router(history.router)
     dp.include_router(admin.router)
-    dp.update.middleware(DbSessionMiddleware())
-    dp.update.middleware(ThrottlingMiddleware())
-    dp.update.middleware(MaintenanceMiddleware())
+
+    dp.message.middleware(DbSessionMiddleware())
+    dp.message.middleware(MaintenanceMiddleware())
+    dp.message.middleware(ThrottlingMiddleware())
+
+    dp.callback_query.middleware(DbSessionMiddleware())
+    dp.callback_query.middleware(MaintenanceMiddleware())
+    dp.callback_query.middleware(ThrottlingMiddleware())
+
     return dp
 
 
