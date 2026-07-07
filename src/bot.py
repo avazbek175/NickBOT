@@ -10,8 +10,8 @@ from src.presentation.middlewares.throttling import ThrottlingMiddleware
 from src.presentation.middlewares.maintenance import MaintenanceMiddleware
 from src.presentation.middlewares.db import DbSessionMiddleware
 from src.presentation.handlers import (
-    start, menu, nickname, favorites, search, language, bonus,
-    referral, leaderboard, history, admin,
+    start, admin, menu, nickname, favorites, search, language, bonus,
+    referral, leaderboard, history, styler,
 )
 
 logger = logging.getLogger(__name__)
@@ -24,6 +24,8 @@ def create_dispatcher() -> Dispatcher:
     dp = Dispatcher()
 
     dp.include_router(start.router)
+    dp.include_router(admin.router)
+    dp.include_router(styler.router)
     dp.include_router(menu.router)
     dp.include_router(nickname.router)
     dp.include_router(favorites.router)
@@ -33,7 +35,6 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(referral.router)
     dp.include_router(leaderboard.router)
     dp.include_router(history.router)
-    dp.include_router(admin.router)
 
     dp.message.middleware(DbSessionMiddleware())
     dp.message.middleware(MaintenanceMiddleware())

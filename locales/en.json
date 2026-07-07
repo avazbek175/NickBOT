@@ -87,5 +87,6 @@
   "lang_select": "🌐 <b>Select Language</b>\\n\\nPlease select your language:",
   "maintenance": "🔧 Bot is under maintenance. Please try again later.",
   "banned": "🚫 You have been banned.",
-  "error": "❌ An error occurred. Please try again later."
+  "error": "❌ An error occurred. Please try again later.",
+  "text_styler": "Text Styler"
 }

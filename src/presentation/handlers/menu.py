@@ -62,7 +62,11 @@ async def menu_handler(message: Message, session: AsyncSession):
     user_service = UserService(session)
     text = message.text
 
-    if "✨" in text:
+    if text.startswith("✨") and "Text Styler" in text:
+        from src.presentation.handlers.styler import styler_start
+        await styler_start(message, session)
+        return
+    elif "✨" in text:
         await show_categories(message, lang)
     elif "🎮" in text:
         await show_categories(message, lang)

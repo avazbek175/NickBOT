@@ -8,6 +8,7 @@ def main_menu_kb(lang: Language = Language.UZBEK) -> ReplyKeyboardMarkup:
     kb = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=f"{t('generate')}")],
+            [KeyboardButton(text=f"✨ {t('text_styler')}")],
             [KeyboardButton(text=f"{t('categories')}"), KeyboardButton(text=f"{t('random')}")],
             [KeyboardButton(text=f"{t('favorites')}"), KeyboardButton(text=f"{t('history')}")],
             [KeyboardButton(text=f"{t('search')}"), KeyboardButton(text=f"{t('profile')}")],

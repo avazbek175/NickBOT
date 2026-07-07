@@ -87,5 +87,6 @@
   "lang_select": "🌐 <b>Tilni tanlang</b>\\n\\nIltimos, tilni tanlang:",
   "maintenance": "🔧 Bot texnik ishlar uchun vaqtincha ishlamayapti. Keyinroq urinib ko'ring.",
   "banned": "🚫 Siz bloklangansiz.",
-  "error": "❌ Xatolik yuz berdi. Iltimos, keyinroq urinib ko'ring."
+  "error": "❌ Xatolik yuz berdi. Iltimos, keyinroq urinib ko'ring.",
+  "text_styler": "Text Styler"
 }
