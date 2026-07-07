@@ -79,7 +79,6 @@ def _handle_webhook(method, body_raw):
     from src import bot as app_bot
     from src.config import config
     from src.infrastructure.cache import init_redis
-    from src.infrastructure.database import get_session
 
     logging.basicConfig(level=getattr(logging, config.log_level.upper(), logging.INFO))
 
@@ -96,7 +95,7 @@ def _handle_webhook(method, body_raw):
         update = Update.model_validate(data)
         dp = app_bot.get_dispatcher()
         bot = app_bot.get_bot()
-        await dp.feed_update(bot, update, session_getter=get_session)
+        await dp.feed_update(bot, update)
 
     loop = _get_loop()
     try:
